@@ -1,0 +1,145 @@
+
+#!/bin/bash
+fileName="time.txt"
+outputFileName="output.txt"
+errLog="err.txt"
+destLocation="path"
+
+USAGE()
+{
+  cat << EOF
+
+        $0:-
+
+        This script helps to copy the files based on inpur hours,dates and node name.
+
+        ${bold}OPTIONS:${off}
+
+        $0 help          [ To get the help ]
+
+        $0 nd=du-3 dt=20230714 sh=01       [ To copy the 1'o clock files ]
+		
+	$0 nd=du-3 dt=20230714 sh=01 eh=03      [ To copy those files  from 1'o clock to 2'o clock ]
+
+EOF
+exit 0
+}
+
+
+
+inputvalidation()
+{
+
+[ `echo $1 |grep -Fo "=" | wc -l` -ne 1 ] && USAGE
+[ `echo $2 |grep -Fo "=" | wc -l` -ne 1 ] && USAGE
+[ `echo $3 |grep -Fo "=" | wc -l` -ne 1 ] && USAGE
+[ ! -z $4 ] && [ `echo $4 |grep -- "=" |wc -l` -ne 1 ] && USAGE
+
+nodeLable=$(echo $1 | awk -F "=" '{print $1}')
+
+[ `echo $1 |grep -c "="` -eq 0 ] && [ "$nodeLable" !=  "nd" ] && USAGE
+
+
+
+dateLable=$(echo $2 | awk -F "=" '{print $1}') 
+
+ [ "$dateLable" != "dt" ] && USAGE 
+
+
+shourLable=$(echo $3 | awk -F "=" '{print $1}') 
+
+[ "$shourLable" != "sh" ] && USAGE
+
+[ ! -z $4 ]  &&  ehourLable=$(echo $4 | awk -F "=" '{print $1}') && [ "$ehourLable" != "eh" ] && USAGE
+
+}
+
+copyfile()
+{
+for fname in `cat $outputFileName`
+do
+[ -e $fname ] && cp $fname $DestLocation
+done
+}
+
+
+
+fetchdata()
+{
+nodeName=$1
+
+dateToday=$2
+
+startHour=$3
+
+[ `grep -c $nodeName $fileName` -eq 0 ] && echo "$nodeName does not exist" >> $errLog && exit
+
+[ `grep -c $dateToday  $fileName` -eq 0 ] && echo "$dateToday does not exist" >> $errLog && exit 
+
+mergeDateTime="$dateToday"_"$startHour"
+
+[ `grep -c "_$mergeDateTime" $fileName` -eq 0 ] && echo "Hour $startHour does not exist" >> $errLog 
+
+grep $nodeName $fileName | grep $mergeDateTime
+
+}
+
+singlehour()
+{
+	inputvalidation $1 $2 $3
+
+        nodeName=$(echo $1 | awk -F "=" '{print $2}')
+
+        dateToday=$(echo $2 | awk -F "=" '{print $2}')
+
+        startHour=$(echo $3 | awk -F "=" '{print $2}')
+
+
+
+	fetchdata $nodeName $dateToday $startHour > $outputFileName
+}
+
+twohour()
+{
+
+	inputvalidation $1 $2 $3 $4
+
+	
+	nodeName=$(echo $1 | awk -F "=" '{print $2}')
+
+        dateToday=$(echo $2 | awk -F "=" '{print $2}')
+
+        startHour=$(echo $3 | awk -F "=" '{print $2}')
+
+	endHour=$(echo $4 | awk -F "=" '{print $2}')
+
+        [ $startHour -gt $endHour ] && echo "Start hour value shoud be less than end hour" && exit 
+ 	
+	for h in $(seq -f %02g $startHour $endHour)
+
+	do 
+
+
+	fetchdata $nodeName $dateToday $h >> $outputFileName
+
+	done
+
+
+}
+cleanup()
+{
+[ -f $outputFileName ] && rm -rf $outputFileName ]
+}
+
+#main block 
+
+#
+#
+cleanup
+case $# in
+3)      #inputvalidation $1 $2 $3
+	singlehour $1 $2 $3  ;;
+4) 	#inputvalidation $1 $2 $3
+	twohour $1 $2 $3 $4;;
+*) USAGE ;;
+esac
