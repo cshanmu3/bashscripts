@@ -129,6 +129,7 @@ twohour()
 cleanup()
 {
 [ -f $outputFileName ] && rm -rf $outputFileName ]
+[ -f $errLog ] && rm -rf $$errLog ] 
 }
 
 #main block 
